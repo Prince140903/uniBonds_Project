@@ -1,0 +1,87 @@
+### UniBonds API Testing
+### You can use this file with REST Client extension in VS Code
+### Or copy the commands to use with curl/Postman
+
+### Health Check
+GET http://localhost:5000/api/health
+
+###
+
+### User Signup
+POST http://localhost:5000/api/auth/signup
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "phone": "1234567890"
+}
+
+###
+
+### User Login
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+###
+
+### Get Current User (Replace YOUR_TOKEN with actual token from login)
+GET http://localhost:5000/api/auth/me
+Authorization: Bearer YOUR_TOKEN
+
+###
+
+### Update Profile (Replace YOUR_TOKEN)
+PUT http://localhost:5000/api/auth/updateprofile
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "name": "John Updated",
+  "email": "john@example.com",
+  "phone": "9876543210"
+}
+
+###
+
+### Update Password (Replace YOUR_TOKEN)
+PUT http://localhost:5000/api/auth/updatepassword
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "currentPassword": "password123",
+  "newPassword": "newpassword123"
+}
+
+###
+
+### Test Invalid Login
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "wrong@example.com",
+  "password": "wrongpassword"
+}
+
+###
+
+### Test Duplicate Signup
+POST http://localhost:5000/api/auth/signup
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+###
+
