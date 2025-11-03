@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide a password'],
       minlength: [6, 'Password must be at least 6 characters'],
-      select: false, // Don't return password by default
+      select: false,
     },
     phone: {
       type: String,
@@ -63,4 +63,3 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 module.exports = mongoose.model('User', userSchema);
-

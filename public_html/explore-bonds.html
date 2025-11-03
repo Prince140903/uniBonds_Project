@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Bonds - UniBonds Securities</title>
+    <meta name="description" content="Browse and compare the best bonds available in the market. Filter by rating, coupon, yield, and more.">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/navigation.css">
+    <link rel="stylesheet" href="/css/notifications.css">
+    <link rel="stylesheet" href="/css/bonds.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div id="navbar"></div>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title slide-up">Explore Bonds</h1>
+                <p class="hero-subtitle slide-up">Find the perfect bonds for your investment portfolio</p>
+                
+                <!-- Search Bar -->
+                <div class="search-bar slide-up">
+                    <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search by issuer name, ISIN, or security name..." class="search-input">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filters & Bonds Section -->
+    <section class="bonds-section py-5">
+        <div class="container">
+            <div class="bonds-container">
+                <!-- Filters Sidebar -->
+                <aside class="filters-sidebar">
+                    <div class="filters-header">
+                        <h3>Filters</h3>
+                        <button id="clearFilters" class="btn-clear-filters">Clear All</button>
+                    </div>
+
+                    <!-- Sort -->
+                    <div class="filter-group">
+                        <label class="filter-label">Sort By</label>
+                        <select id="sortBy" class="form-select">
+                            <option value="">Default (Newest)</option>
+                            <option value="coupon_high">Coupon: High to Low</option>
+                            <option value="coupon_low">Coupon: Low to High</option>
+                            <option value="yield_high">Yield: High to Low</option>
+                            <option value="yield_low">Yield: Low to High</option>
+                            <option value="maturity_soon">Maturity: Earliest First</option>
+                            <option value="maturity_later">Maturity: Latest First</option>
+                        </select>
+                    </div>
+
+                    <!-- Rating Filter -->
+                    <div class="filter-group">
+                        <label class="filter-label">Credit Rating</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="rating" value="AAA">
+                                <span>AAA</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="rating" value="AA+">
+                                <span>AA+</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="rating" value="AA">
+                                <span>AA</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="rating" value="A+">
+                                <span>A+</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="rating" value="A">
+                                <span>A</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Coupon Range -->
+                    <div class="filter-group">
+                        <label class="filter-label">Coupon Rate (%)</label>
+                        <div class="range-inputs">
+                            <input type="number" id="minCoupon" placeholder="Min" class="form-control" step="0.1">
+                            <span>to</span>
+                            <input type="number" id="maxCoupon" placeholder="Max" class="form-control" step="0.1">
+                        </div>
+                    </div>
+
+                    <!-- Yield Range -->
+                    <div class="filter-group">
+                        <label class="filter-label">Yield to Maturity (%)</label>
+                        <div class="range-inputs">
+                            <input type="number" id="minYield" placeholder="Min" class="form-control" step="0.1">
+                            <span>to</span>
+                            <input type="number" id="maxYield" placeholder="Max" class="form-control" step="0.1">
+                        </div>
+                    </div>
+
+                    <!-- Coupon Type -->
+                    <div class="filter-group">
+                        <label class="filter-label">Coupon Type</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="couponType" value="Fixed">
+                                <span>Fixed</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="couponType" value="Floating">
+                                <span>Floating</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="couponType" value="Step Up">
+                                <span>Step Up</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Security Type -->
+                    <div class="filter-group">
+                        <label class="filter-label">Security Type</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="security" value="Secured">
+                                <span>Secured</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="security" value="Unsecured">
+                                <span>Unsecured</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Listing Status -->
+                    <div class="filter-group">
+                        <label class="filter-label">Listing Status</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="listingStatus" value="Listed">
+                                <span>Listed</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="listingStatus" value="Unlisted">
+                                <span>Unlisted</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Apply Filters Button -->
+                    <button id="applyFilters" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                        Apply Filters
+                    </button>
+                </aside>
+
+                <!-- Bonds Grid -->
+                <div class="bonds-main">
+                    <!-- Results Info -->
+                    <div class="results-info">
+                        <div>
+                            <span id="resultsCount" class="results-count">Loading...</span>
+                            <span class="results-text">bonds found</span>
+                        </div>
+                        <button id="toggleFilters" class="btn-toggle-filters">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                            </svg>
+                            Filters
+                        </button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loadingState" class="loading-state">
+                        <div class="spinner" style="width: 50px; height: 50px; border-width: 4px;"></div>
+                        <p>Loading bonds...</p>
+                    </div>
+
+                    <!-- Bonds Grid -->
+                    <div id="bondsGrid" class="bonds-grid"></div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <svg width="100" height="100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <h3>No bonds found</h3>
+                        <p>Try adjusting your filters or search query</p>
+                        <button onclick="clearAllFilters()" class="btn btn-primary">Clear Filters</button>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div id="pagination" class="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/navigation.js"></script>
+    <script>
+        // Load navbar
+        fetch('/components/navbar.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('navbar').innerHTML = html;
+                updateUserUI();
+            });
+    </script>
+    <script src="/js/explore-bonds.js"></script>
+</body>
+</html>
+

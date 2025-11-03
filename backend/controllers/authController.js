@@ -7,7 +7,6 @@ const { validationResult } = require('express-validator');
 // @access  Public
 exports.signup = async (req, res, next) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -18,7 +17,6 @@ exports.signup = async (req, res, next) => {
 
     const { name, email, password, phone } = req.body;
 
-    // Check if user already exists
     const userExists = await User.findOne({ email });
 
     if (userExists) {
@@ -28,7 +26,6 @@ exports.signup = async (req, res, next) => {
       });
     }
 
-    // Create user
     const user = await User.create({
       name,
       email,
@@ -65,7 +62,6 @@ exports.signup = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -76,7 +72,6 @@ exports.login = async (req, res, next) => {
 
     const { email, password } = req.body;
 
-    // Check if email and password is provided
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -84,7 +79,6 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check for user (include password field)
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
@@ -94,7 +88,6 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check if password matches
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
@@ -170,7 +163,6 @@ exports.updatePassword = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('+password');
 
-    // Check current password
     if (!(await user.matchPassword(req.body.currentPassword))) {
       return res.status(401).json({
         success: false,
@@ -195,4 +187,3 @@ exports.updatePassword = async (req, res, next) => {
     next(error);
   }
 };
-

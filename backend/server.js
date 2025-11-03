@@ -41,6 +41,8 @@ app.use('/api', limiter);
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/bonds', require('./routes/bondRoutes'));
+app.use('/api/bond-ipos', require('./routes/bondIPORoutes'));
 
 // Health check route
 app.get('/api/health', (req, res) => {
@@ -60,6 +62,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
+      bonds: '/api/bonds',
+      bondIPOs: '/api/bond-ipos',
     },
   });
 });
@@ -84,7 +88,5 @@ const server = app.listen(PORT, () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.log(`Error: ${err.message}`);
-  // Close server & exit process
   server.close(() => process.exit(1));
 });
-

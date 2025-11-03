@@ -20,7 +20,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Uploads
+uploads/
+
 # Build
 dist/
 build/
-

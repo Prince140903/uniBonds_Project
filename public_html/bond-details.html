@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bond Details - UniBonds Securities</title>
+    <meta name="description" content="View comprehensive bond details including ratings, financials, and investment information.">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/navigation.css">
+    <link rel="stylesheet" href="/css/notifications.css">
+    <link rel="stylesheet" href="/css/bond-details.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div id="navbar"></div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-container">
+        <div class="spinner" style="width: 50px; height: 50px; border-width: 4px;"></div>
+        <p>Loading bond details...</p>
+    </div>
+
+    <!-- Bond Details Container -->
+    <div id="bondDetails" style="display: none;">
+        <!-- Hero Section -->
+        <section class="bond-hero">
+            <div class="container">
+                <div class="bond-hero-content">
+                    <div class="bond-hero-main">
+                        <div class="bond-hero-breadcrumb">
+                            <a href="/index.html">Home</a>
+                            <span>/</span>
+                            <a href="/explore-bonds.html">Bonds</a>
+                            <span>/</span>
+                            <span id="breadcrumbName">Bond Details</span>
+                        </div>
+                        <h1 class="bond-hero-title" id="bondTitle">Loading...</h1>
+                        <p class="bond-hero-subtitle" id="bondIssuer"></p>
+                        <div class="bond-hero-badges" id="bondBadges"></div>
+                    </div>
+                    <div class="bond-hero-actions">
+                        <div class="bond-hero-price">
+                            <span class="price-label">Current Price</span>
+                            <span class="price-value" id="heroPrice">₹0</span>
+                            <span class="price-face-value" id="heroFaceValue">Face Value: ₹0</span>
+                        </div>
+                        <button class="btn btn-primary btn-lg" onclick="investNow()">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Invest Now
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadProspectus()">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Download Prospectus
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bond Information Tabs -->
+        <section class="bond-content py-5">
+            <div class="container">
+                <div class="bond-tabs">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="financials">Financials</button>
+                    <button class="tab-btn" data-tab="documents">Documents</button>
+                    <button class="tab-btn" data-tab="about">About Issuer</button>
+                </div>
+
+                <div class="bond-tab-content">
+                    <!-- Overview Tab -->
+                    <div class="tab-pane active" id="overview">
+                        <div class="grid grid-cols-2">
+                            <!-- Issue Details -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Issue Details</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="detail-grid">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Issuer Name</span>
+                                            <span class="detail-value" id="detailIssuerName">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Security Name</span>
+                                            <span class="detail-value" id="detailSecurityName">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">ISIN</span>
+                                            <span class="detail-value" id="detailISIN">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Face Value</span>
+                                            <span class="detail-value" id="detailFaceValue">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Coupon Rate</span>
+                                            <span class="detail-value" id="detailCoupon">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Coupon Type</span>
+                                            <span class="detail-value" id="detailCouponType">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Mode of Issue</span>
+                                            <span class="detail-value" id="detailModeOfIssue">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">IP Frequency</span>
+                                            <span class="detail-value" id="detailIPFrequency">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Taxation</span>
+                                            <span class="detail-value" id="detailTaxation">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Security</span>
+                                            <span class="detail-value" id="detailSecurity">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Seniority</span>
+                                            <span class="detail-value" id="detailSeniority">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Listing Status</span>
+                                            <span class="detail-value" id="detailListingStatus">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dates & Tenure -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Important Dates</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="detail-grid">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Allotment Date</span>
+                                            <span class="detail-value" id="detailAllotmentDate">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Maturity Date</span>
+                                            <span class="detail-value" id="detailMaturityDate">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Next Payment Date</span>
+                                            <span class="detail-value" id="detailNextPaymentDate">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Call Date</span>
+                                            <span class="detail-value" id="detailCallDate">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Put Date</span>
+                                            <span class="detail-value" id="detailPutDate">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Total Tenure</span>
+                                            <span class="detail-value" id="detailTotalTenure">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Remaining Tenure</span>
+                                            <span class="detail-value" id="detailRemainingTenure">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Rating Information -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Credit Rating</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="detail-grid">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Rating</span>
+                                            <span class="detail-value" id="detailRating">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Rating Agency</span>
+                                            <span class="detail-value" id="detailRatingAgency">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Rating Date</span>
+                                            <span class="detail-value" id="detailRatingDate">-</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Trustee</span>
+                                            <span class="detail-value" id="detailTrustee">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Investment Metrics -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>Investment Metrics</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="metrics-large">
+                                        <div class="metric-large">
+                                            <span class="metric-large-label">Current Price</span>
+                                            <span class="metric-large-value" id="detailCurrentPrice">-</span>
+                                        </div>
+                                        <div class="metric-large">
+                                            <span class="metric-large-label">Yield to Maturity</span>
+                                            <span class="metric-large-value" id="detailYTM">-</span>
+                                        </div>
+                                        <div class="metric-large">
+                                            <span class="metric-large-label">Min Investment</span>
+                                            <span class="metric-large-value" id="detailMinInvestment">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financials Tab -->
+                    <div class="tab-pane" id="financials">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Financial Performance</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="financials-table" id="financialsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Year</th>
+                                                <th>Revenue (₹ Cr)</th>
+                                                <th>Net Profit (₹ Cr)</th>
+                                                <th>Total Assets (₹ Cr)</th>
+                                                <th>Total Liabilities (₹ Cr)</th>
+                                                <th>Equity (₹ Cr)</th>
+                                                <th>EPS (₹)</th>
+                                                <th>Debt/Equity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="8" class="text-center">No financial data available</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Documents Tab -->
+                    <div class="tab-pane" id="documents">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Issue Documents</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="documents-grid" id="documentsGrid">
+                                    <div class="text-center py-4">
+                                        <p>No documents available</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- About Issuer Tab -->
+                    <div class="tab-pane" id="about">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>About Issuer</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="aboutIssuer" class="about-issuer-content">
+                                    <p>Loading issuer information...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/navigation.js"></script>
+    <script>
+        // Load navbar
+        fetch('/components/navbar.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('navbar').innerHTML = html;
+                updateUserUI();
+            });
+    </script>
+    <script src="/js/bond-details.js"></script>
+</body>
+</html>
+

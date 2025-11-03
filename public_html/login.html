@@ -195,9 +195,10 @@
         </div>
     </div>
 
+    <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        const API_URL = window.AppConfig.API_URL;
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();

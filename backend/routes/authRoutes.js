@@ -29,10 +29,9 @@ const loginValidation = [
 router.post('/signup', signupValidation, signup);
 router.post('/login', loginValidation, login);
 
-// Protected routes (require authentication)
+// Protected routes
 router.get('/me', protect, getMe);
 router.put('/updateprofile', protect, updateProfile);
 router.put('/updatepassword', protect, updatePassword);
 
 module.exports = router;
-
