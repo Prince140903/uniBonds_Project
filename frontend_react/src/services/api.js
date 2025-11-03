@@ -23,14 +23,34 @@ class ApiService {
 
     try {
       const response = await fetch(url, config)
+      
+      // Handle non-JSON responses (like 429 rate limit errors)
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${text || response.statusText}`)
+        }
+        // If it's OK but not JSON, try to parse as JSON anyway
+        try {
+          return JSON.parse(text)
+        } catch {
+          return { success: true, data: text }
+        }
+      }
+
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'An error occurred')
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`)
       }
 
       return data
     } catch (error) {
+      // Re-throw with better error message
+      if (error.message.includes('429') || error.message.includes('Too many')) {
+        throw new Error('429: Too many requests')
+      }
       throw error
     }
   }

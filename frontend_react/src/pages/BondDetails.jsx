@@ -6,16 +6,14 @@ const BondDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [bond, setBond] = useState(null);
+  const [similarBonds, setSimilarBonds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("details");
 
   useEffect(() => {
-    console.log("BondDetails mounted with ID:", id);
     if (id) {
-      console.log("Fetching bond with ID:", id);
       fetchBondDetails();
     } else {
-      console.log("No bond ID found in params, redirecting to /bonds");
       navigate("/bonds");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -29,22 +27,39 @@ const BondDetails = () => {
 
     try {
       setLoading(true);
-      console.log("Calling API with ID:", id, "Type:", typeof id);
       const response = await apiService.getBondById(id);
-      console.log("API Response:", response);
       if (response.success && response.data) {
-        console.log("Bond data received:", response.data);
         setBond(response.data);
+        // Fetch similar bonds (same type, excluding current bond)
+        fetchSimilarBonds(response.data);
       } else {
-        console.error("Bond not found in response. ID:", id, "Response:", response);
         navigate("/bonds");
       }
     } catch (error) {
       console.error("Error fetching bond details:", error);
-      console.error("Error details:", error.message, error.stack);
       navigate("/bonds");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSimilarBonds = async (currentBond) => {
+    try {
+      // Fetch bonds with same type and rating, excluding current bond
+      const response = await apiService.getBonds({
+        type: currentBond.type,
+        rating: currentBond.rating,
+        limit: 3,
+      });
+      if (response.success && response.data) {
+        // Filter out current bond
+        const filtered = response.data.filter(
+          (b) => (b.bondId || b._id) !== (currentBond.bondId || currentBond._id)
+        );
+        setSimilarBonds(filtered.slice(0, 3));
+      }
+    } catch (error) {
+      console.error("Error fetching similar bonds:", error);
     }
   };
 
@@ -52,14 +67,17 @@ const BondDetails = () => {
     if (!dateString) return "-";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
-      month: "long",
-      day: "numeric",
     });
   };
 
   const formatCurrency = (amount) => {
     if (!amount) return "-";
+    if (amount >= 100000) {
+      return `₹${(amount / 100000).toFixed(1)}L`;
+    }
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
@@ -68,29 +86,7 @@ const BondDetails = () => {
     }).format(amount);
   };
 
-  const calculateRemainingTenure = (maturityDate) => {
-    if (!maturityDate) return "-";
-    const maturity = new Date(maturityDate);
-    const today = new Date();
-    const diffTime = maturity - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return "Expired";
-    
-    const years = Math.floor(diffDays / 365);
-    const months = Math.floor((diffDays % 365) / 30);
-    const days = diffDays % 30;
-    
-    if (years > 0) {
-      return `${years}Y ${months}M`;
-    } else if (months > 0) {
-      return `${months}M ${days}D`;
-    } else {
-      return `${days}D`;
-    }
-  };
-
-  const calculateTotalTenure = (maturityDate, createdAt) => {
+  const calculateTenure = (maturityDate, createdAt) => {
     if (!maturityDate || !createdAt) return "-";
     const maturity = new Date(maturityDate);
     const created = new Date(createdAt);
@@ -98,43 +94,29 @@ const BondDetails = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const years = Math.floor(diffDays / 365);
     const months = Math.floor((diffDays % 365) / 30);
-    return `${years}Y ${months}M`;
+    if (years > 0 && months > 0) {
+      return `${years} Year${years > 1 ? "s" : ""} ${months} Month${
+        months > 1 ? "s" : ""
+      }`;
+    } else if (years > 0) {
+      return `${years} Year${years > 1 ? "s" : ""}`;
+    } else if (months > 0) {
+      return `${months} Month${months > 1 ? "s" : ""}`;
+    }
+    return "Less than 1 Month";
   };
 
   const handleInvestNow = () => {
-    // Navigate to investment page or show modal
     console.log("Invest Now clicked for bond:", bond?.bondId);
   };
 
-  const handleDownloadProspectus = () => {
-    // Handle prospectus download
-    console.log("Download prospectus for bond:", bond?.bondId);
-  };
-
+  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-20 sm:pt-24">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-unibonds-orange mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-unibonds-orange border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600">Loading bond details...</p>
-          <p className="text-sm text-gray-500 mt-2">ID: {id || "Not found"}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!bond && !loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-20 sm:pt-24">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Bond not found</p>
-          <p className="text-sm text-gray-500 mb-4">ID attempted: {id || "Not provided"}</p>
-          <Link
-            to="/bonds"
-            className="text-unibonds-orange hover:underline"
-          >
-            Go back to Bonds
-          </Link>
         </div>
       </div>
     );
@@ -144,469 +126,395 @@ const BondDetails = () => {
     return null;
   }
 
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "financials", label: "Financials" },
-    { id: "documents", label: "Documents" },
-    { id: "about", label: "About Issuer" },
-  ];
+  const tenure = calculateTenure(bond.maturity, bond.createdAt);
+  const expectedYield = bond.yield || bond.coupon || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 sm:pt-24">
-      {/* Hero Section */}
-      <section className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-6 sm:py-8">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <Link to="/" className="hover:text-unibonds-orange">
-              Home
-            </Link>
-            <span>/</span>
-            <Link to="/bonds" className="hover:text-unibonds-orange">
-              Bonds
-            </Link>
-            <span>/</span>
-            <span className="text-unibonds-navy font-medium">{bond.issuer}</span>
-          </div>
+    <div className="min-h-screen bg-gray-50 pt-20 sm:pt-24 pb-12">
+      <div className="container mx-auto px-4 max-w-7xl">
+        {/* Back Button */}
+        <Link
+          to="/bonds"
+          className="inline-flex items-center gap-2 text-unibonds-orange hover:text-unibonds-orange/80 font-medium mb-6 transition-colors"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back to Bonds
+        </Link>
 
-          <div className="flex flex-col lg:flex-row justify-between gap-6">
-            <div className="flex-1">
-              <h1 className="font-poppins font-bold text-2xl sm:text-3xl md:text-4xl text-unibonds-navy mb-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Main Bond Information Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
                 {bond.issuer}
               </h1>
-              <p className="text-gray-600 text-lg mb-4">ISIN: {bond.isin}</p>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold bg-blue-50 text-blue-700 border-blue-200">
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
                   {bond.type}
                 </span>
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold bg-green-50 text-green-700 border-green-200">
-                  {bond.ratingAgency} {bond.rating}
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                  {bond.rating}
                 </span>
                 {bond.tradable && (
-                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold bg-purple-50 text-purple-700 border-purple-200">
+                  <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
                     Tradable
                   </span>
                 )}
               </div>
-            </div>
 
-            <div className="flex flex-col gap-4 lg:items-end">
-              <div className="text-right">
-                <div className="text-sm text-gray-600 mb-1">Current Price</div>
-                <div className="text-3xl font-bold text-unibonds-navy mb-1">
-                  {formatCurrency(bond.faceValue)}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Face Value: {formatCurrency(bond.faceValue)}
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={handleInvestNow}
-                  className="inline-flex items-center justify-center gap-2 bg-unibonds-orange hover:bg-unibonds-orange/90 text-white font-semibold px-6 py-3 rounded-lg transition-all"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M12 8v8m-4-4h8"></path>
-                  </svg>
-                  Invest Now
-                </button>
-                <button
-                  onClick={handleDownloadProspectus}
-                  className="inline-flex items-center justify-center gap-2 border-2 border-unibonds-navy text-unibonds-navy hover:bg-unibonds-navy hover:text-white font-semibold px-6 py-3 rounded-lg transition-all"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  Download Prospectus
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Content Section with Tabs */}
-      <section className="container mx-auto px-4 py-8">
-        {/* Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <div className="flex flex-wrap gap-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`pb-4 px-2 font-medium transition-colors border-b-2 ${
-                  activeTab === tab.id
-                    ? "border-unibonds-orange text-unibonds-orange"
-                    : "border-transparent text-gray-600 hover:text-unibonds-navy"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-6">
-          {/* Overview Tab */}
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Issue Details */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                  Issue Details
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Issuer Name</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.issuer || "-"}
-                    </span>
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {/* Coupon Rate */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                      <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
                   </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Security Name</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.issuer || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">ISIN</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.isin || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Face Value</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {formatCurrency(bond.faceValue)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Coupon</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.coupon?.toFixed(4)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Coupon Type</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.frequency || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Mode of Issue</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.type || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">IP Frequency</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.frequency || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Taxation</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.type === "Tax-Free" ? "Tax Free" : "Taxable"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Security</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      Secured
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Seniority</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      Senior
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2">
-                    <span className="text-gray-600 font-medium">Listing Status</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.tradable ? "Listed" : "Unlisted"}
-                    </span>
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {bond.coupon?.toFixed(1) || "-"}%
+                    </div>
+                    <div className="text-sm text-gray-500">Coupon Rate</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Dates & Tenure */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                  Important Dates
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Allotment Date</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {formatDate(bond.createdAt) || "-"}
-                    </span>
+                {/* Maturity */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
                   </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Maturity Date</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {tenure}
+                    </div>
+                    <div className="text-xs text-gray-500">
                       {formatDate(bond.maturity)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Next Payment Date</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {formatDate(bond.maturity) || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Call Date</span>
-                    <span className="text-unibonds-navy font-semibold text-right">-</span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Put Date</span>
-                    <span className="text-unibonds-navy font-semibold text-right">-</span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Total Tenure</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {calculateTotalTenure(bond.maturity, bond.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2">
-                    <span className="text-gray-600 font-medium">Remaining Tenure</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {calculateRemainingTenure(bond.maturity)}
-                    </span>
+                    </div>
+                    <div className="text-sm text-gray-500">Maturity</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Rating Information */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                  Credit Rating
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Rating</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.rating || "-"}
-                    </span>
+                {/* Min Investment */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="12" y1="1" x2="12" y2="23"></line>
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
                   </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Rating Agency</span>
-                    <span className="text-unibonds-navy font-semibold text-right">
-                      {bond.ratingAgency || "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start py-2 border-b border-gray-100">
-                    <span className="text-gray-600 font-medium">Rating Date</span>
-                    <span className="text-unibonds-navy font-semibold text-right">-</span>
-                  </div>
-                  <div className="flex justify-between items-start py-2">
-                    <span className="text-gray-600 font-medium">Trustee</span>
-                    <span className="text-unibonds-navy font-semibold text-right">-</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Investment Metrics */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                  Investment Metrics
-                </h3>
-                <div className="space-y-6">
-                  <div className="text-center py-4 border-b border-gray-100">
-                    <div className="text-sm text-gray-600 mb-2">Current Price</div>
-                    <div className="text-3xl font-bold text-unibonds-orange">
-                      {formatCurrency(bond.faceValue)}
-                    </div>
-                  </div>
-                  <div className="text-center py-4 border-b border-gray-100">
-                    <div className="text-sm text-gray-600 mb-2">Yield to Maturity</div>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {bond.yield?.toFixed(2)}%
-                    </div>
-                  </div>
-                  <div className="text-center py-4">
-                    <div className="text-sm text-gray-600 mb-2">Min Investment</div>
-                    <div className="text-3xl font-bold text-unibonds-navy">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">
                       {formatCurrency(bond.minInvestment)}
                     </div>
+                    <div className="text-sm text-gray-500">Min Investment</div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Financials Tab */}
-          {activeTab === "financials" && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                Financial Performance
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Year
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Revenue (₹ Cr)
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Net Profit (₹ Cr)
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Total Assets (₹ Cr)
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Total Liabilities (₹ Cr)
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Equity (₹ Cr)
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        EPS (₹)
-                      </th>
-                      <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-unibonds-navy">
-                        Debt/Equity
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td
-                        colSpan="8"
-                        className="border border-gray-200 px-4 py-8 text-center text-gray-500"
-                      >
-                        No financial data available
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Documents Tab */}
-          {activeTab === "documents" && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                Issue Documents
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-unibonds-navy">Rating Rational</h4>
+                {/* Expected Yield */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
                     <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
+                      width="24"
+                      height="24"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="currentColor"
+                      stroke="#f97316"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="text-gray-400"
                     >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                      <polyline points="17 6 23 6 23 12"></polyline>
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-600">Not available</p>
-                </div>
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-unibonds-navy">IM/KID</h4>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-gray-400"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
+                  <div>
+                    <div className="text-2xl font-bold text-unibonds-orange">
+                      {expectedYield.toFixed(2)}%
+                    </div>
+                    <div className="text-sm text-gray-500">Expected Yield</div>
                   </div>
-                  <p className="text-sm text-gray-600">Not available</p>
-                </div>
-                <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-unibonds-navy">Synopsis</h4>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-gray-400"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600">Not available</p>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* About Issuer Tab */}
-          {activeTab === "about" && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-4">
-                About Issuer
-              </h3>
-              <div className="prose max-w-none">
+              {/* About the Issuer */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  About the Issuer
+                </h3>
                 <p className="text-gray-700 leading-relaxed">
                   {bond.description ||
-                    `${bond.issuer} is a reputable financial institution offering various fixed-income investment products. The issuer has a strong track record in the bond market and maintains high credit ratings from leading rating agencies. This bond offering provides investors with a secure investment option with competitive yields and regular interest payments.`}
+                    `${bond.issuer} is a reputable financial institution offering various fixed-income investment products. The issuer has a strong track record in the bond market and maintains high credit ratings from leading rating agencies.`}
                 </p>
               </div>
             </div>
-          )}
+
+            {/* Bond Details Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab("details")}
+                  className={`px-6 py-4 font-semibold text-sm transition-colors ${
+                    activeTab === "details"
+                      ? "bg-gray-100 text-gray-900 border-b-2 border-unibonds-orange"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Bond Details
+                </button>
+                <button
+                  onClick={() => setActiveTab("schedule")}
+                  className={`px-6 py-4 font-semibold text-sm transition-colors ${
+                    activeTab === "schedule"
+                      ? "bg-gray-100 text-gray-900 border-b-2 border-unibonds-orange"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Payment Schedule
+                </button>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className={`px-6 py-4 font-semibold text-sm transition-colors ${
+                    activeTab === "documents"
+                      ? "bg-gray-100 text-gray-900 border-b-2 border-unibonds-orange"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Documents
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="p-6">
+                {activeTab === "details" && (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">ISIN</span>
+                      <span className="font-semibold text-gray-900">
+                        {bond.isin || "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Face Value</span>
+                      <span className="font-semibold text-gray-900">
+                        {formatCurrency(bond.faceValue)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Rating Agency</span>
+                      <span className="font-semibold text-gray-900">
+                        {bond.ratingAgency || "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">Frequency</span>
+                      <span className="font-semibold text-gray-900">
+                        {bond.frequency || "-"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "schedule" && (
+                  <div className="text-center py-8 text-gray-500">
+                    Payment schedule information will be displayed here.
+                  </div>
+                )}
+
+                {activeTab === "documents" && (
+                  <div className="text-center py-8 text-gray-500">
+                    Documents will be available here.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Similar Bonds Card */}
+            {similarBonds.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  Similar Bonds
+                </h3>
+                <div className="space-y-4">
+                  {similarBonds.map((similarBond) => (
+                    <Link
+                      key={similarBond.bondId || similarBond._id}
+                      to={`/bonds/${similarBond.bondId || similarBond._id}`}
+                      className="flex items-center justify-between py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 mb-1">
+                          {similarBond.issuer}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {similarBond.rating} • {similarBond.type}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-unibonds-orange">
+                          {(
+                            similarBond.yield ||
+                            similarBond.coupon ||
+                            0
+                          ).toFixed(2)}
+                          %
+                        </div>
+                        <div className="text-xs text-gray-500">Yield</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Investment Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">
+                Investment Summary
+              </h3>
+
+              {/* Expected Returns Highlight */}
+              <div className="bg-orange-50 rounded-lg p-4 mb-6">
+                <div className="text-sm text-gray-600 mb-1">
+                  Expected Returns (Annual)
+                </div>
+                <div className="text-4xl font-bold text-unibonds-orange">
+                  {expectedYield.toFixed(2)}%
+                </div>
+              </div>
+
+              {/* Investment Details */}
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Min Investment</span>
+                  <span className="font-semibold text-gray-900">
+                    {formatCurrency(bond.minInvestment)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Tenure</span>
+                  <span className="font-semibold text-gray-900">{tenure}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Rating</span>
+                  <span className="font-semibold text-gray-900">
+                    {bond.rating || "-"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Invest Now Button */}
+              <button
+                onClick={handleInvestNow}
+                className="w-full bg-unibonds-orange hover:bg-unibonds-orange/90 text-white font-semibold py-3 px-6 rounded-lg transition-all mb-6"
+              >
+                Invest Now
+              </button>
+
+              {/* Disclaimers */}
+              <div className="space-y-3 text-xs text-gray-500">
+                <div className="flex items-start gap-2">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="mt-0.5 flex-shrink-0"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                  <span>Investments in bonds are subject to market risks</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="mt-0.5 flex-shrink-0"
+                  >
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span>SEBI registered intermediary</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
 
 export default BondDetails;
-

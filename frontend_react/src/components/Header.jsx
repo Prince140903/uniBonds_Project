@@ -23,7 +23,7 @@ const Header = () => {
           <Link to="/" className="flex items-center">
             <img
               alt="Unibonds"
-              fetchPriority="high"
+              fetchpriority="high"
               width="180"
               height="60"
               className="h-8 sm:h-10 md:h-12 w-auto"
