@@ -208,3 +208,210 @@ exports.getBondsByRating = async (req, res) => {
     });
   }
 };
+
+// Create new bond
+exports.createBond = async (req, res) => {
+  try {
+    const {
+      bondId,
+      issuer,
+      isin,
+      type,
+      coupon,
+      yield: yieldValue,
+      rating,
+      ratingAgency,
+      maturity,
+      minInvestment,
+      faceValue,
+      tradable,
+      frequency,
+      description,
+      isActive,
+    } = req.body;
+
+    // Check if bond with same bondId or ISIN already exists
+    const existingBond = await Bond.findOne({
+      $or: [{ bondId }, { isin: isin?.toUpperCase() }],
+    });
+
+    if (existingBond) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bond with this Bond ID or ISIN already exists',
+      });
+    }
+
+    const bond = await Bond.create({
+      bondId,
+      issuer,
+      isin: isin?.toUpperCase(),
+      type,
+      coupon,
+      yield: yieldValue,
+      rating,
+      ratingAgency,
+      maturity,
+      minInvestment,
+      faceValue,
+      tradable: tradable !== undefined ? tradable : true,
+      frequency,
+      description,
+      isActive: isActive !== undefined ? isActive : true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Bond created successfully',
+      data: bond,
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors,
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bond with this Bond ID or ISIN already exists',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error creating bond',
+      error: error.message,
+    });
+  }
+};
+
+// Update bond by ID
+exports.updateBond = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // If ISIN is being updated, uppercase it
+    if (updateData.isin) {
+      updateData.isin = updateData.isin.toUpperCase();
+    }
+
+    // Build query - try numeric bondId first, then MongoDB _id
+    const numericId = parseInt(id);
+    let query;
+
+    if (!isNaN(numericId) && numericId.toString() === id) {
+      query = { bondId: numericId };
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: new mongoose.Types.ObjectId(id) };
+    } else {
+      query = { _id: id };
+    }
+
+    // Check if updating to a bondId or ISIN that already exists
+    if (updateData.bondId || updateData.isin) {
+      const existingBond = await Bond.findOne({
+        $or: [
+          updateData.bondId ? { bondId: updateData.bondId } : {},
+          updateData.isin ? { isin: updateData.isin } : {},
+        ],
+      });
+
+      if (existingBond) {
+        // Check if it's not the same bond we're updating
+        const currentBond = await Bond.findOne(query);
+        if (!currentBond || existingBond._id.toString() !== currentBond._id.toString()) {
+          return res.status(400).json({
+            success: false,
+            message: 'Bond with this Bond ID or ISIN already exists',
+          });
+        }
+      }
+    }
+
+    const bond = await Bond.findOneAndUpdate(query, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!bond) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bond not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Bond updated successfully',
+      data: bond,
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors,
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bond with this Bond ID or ISIN already exists',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error updating bond',
+      error: error.message,
+    });
+  }
+};
+
+// Delete bond by ID
+exports.deleteBond = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Build query - try numeric bondId first, then MongoDB _id
+    const numericId = parseInt(id);
+    let query;
+
+    if (!isNaN(numericId) && numericId.toString() === id) {
+      query = { bondId: numericId };
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: new mongoose.Types.ObjectId(id) };
+    } else {
+      query = { _id: id };
+    }
+
+    const bond = await Bond.findOneAndDelete(query);
+
+    if (!bond) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bond not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Bond deleted successfully',
+      data: bond,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting bond',
+      error: error.message,
+    });
+  }
+};
