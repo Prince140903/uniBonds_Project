@@ -6,10 +6,13 @@ import BondsSection from './components/BondsSection'
 import OtherProductsSection from './components/OtherProductsSection'
 import FeaturesSection from './components/FeaturesSection'
 import HowItWorksSection from './components/HowItWorksSection'
+import TestimonialsSection from './components/TestimonialsSection'
+import HomeFAQSection from './components/HomeFAQSection'
 import Footer from './components/Footer'
 import WhatsAppButton from './components/WhatsAppButton'
 import About from './pages/About'
 import Bonds from './pages/Bonds'
+import BondDetails from './pages/BondDetails'
 import BondsIPO from './pages/BondsIPO'
 import OtherProducts from './pages/OtherProducts'
 import StructuredProducts from './pages/StructuredProducts'
@@ -30,6 +33,8 @@ function Home() {
       <OtherProductsSection />
       <FeaturesSection />
       <HowItWorksSection />
+      <TestimonialsSection />
+      <HomeFAQSection />
     </main>
   )
 }
@@ -43,6 +48,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
+            <Route path="/bonds/:id" element={<BondDetails />} />
             <Route path="/bonds" element={<Bonds />} />
             <Route path="/bonds-ipo" element={<BondsIPO />} />
             <Route path="/other-products" element={<OtherProducts />} />

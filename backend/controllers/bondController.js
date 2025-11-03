@@ -1,230 +1,210 @@
 const Bond = require('../models/Bond');
+const mongoose = require('mongoose');
 
-// @desc    Get all bonds with filters
-// @route   GET /api/bonds
-// @access  Public
-exports.getBonds = async (req, res, next) => {
+// Get all bonds with optional filters
+exports.getAllBonds = async (req, res) => {
   try {
     const {
+      type,
       rating,
-      minCoupon,
-      maxCoupon,
       minYield,
       maxYield,
-      couponType,
-      security,
-      listingStatus,
+      tradable,
+      isActive,
+      minMaturity,
+      maxMaturity,
       search,
-      sort,
       page = 1,
-      limit = 12,
+      limit = 20,
+      sortBy = 'yield',
+      sortOrder = 'desc',
     } = req.query;
 
-    // Build query
-    let query = { status: 'active' };
+    // Build filter object
+    const filter = {};
 
-    // Search
+    if (type) filter.type = type;
+    if (rating) filter.rating = rating;
+    if (tradable !== undefined) filter.tradable = tradable === 'true';
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (minYield) filter.yield = { ...filter.yield, $gte: parseFloat(minYield) };
+    if (maxYield) filter.yield = { ...filter.yield, $lte: parseFloat(maxYield) };
+    if (minMaturity) filter.maturity = { ...filter.maturity, $gte: new Date(minMaturity) };
+    if (maxMaturity) filter.maturity = { ...filter.maturity, $lte: new Date(maxMaturity) };
+
+    // Search filter (issuer or ISIN)
     if (search) {
-      query.$text = { $search: search };
+      filter.$or = [
+        { issuer: { $regex: search, $options: 'i' } },
+        { isin: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
     }
 
-    // Filters
-    if (rating) query.rating = rating;
-    if (couponType) query.couponType = couponType;
-    if (security) query.security = security;
-    if (listingStatus) query.listingStatus = listingStatus;
-
-    if (minCoupon || maxCoupon) {
-      query.coupon = {};
-      if (minCoupon) query.coupon.$gte = parseFloat(minCoupon);
-      if (maxCoupon) query.coupon.$lte = parseFloat(maxCoupon);
-    }
-
-    if (minYield || maxYield) {
-      query.yieldToMaturity = {};
-      if (minYield) query.yieldToMaturity.$gte = parseFloat(minYield);
-      if (maxYield) query.yieldToMaturity.$lte = parseFloat(maxYield);
-    }
-
-    // Sort
-    let sortBy = '-createdAt';
-    if (sort === 'coupon_high') sortBy = '-coupon';
-    if (sort === 'coupon_low') sortBy = 'coupon';
-    if (sort === 'yield_high') sortBy = '-yieldToMaturity';
-    if (sort === 'yield_low') sortBy = 'yieldToMaturity';
-    if (sort === 'maturity_soon') sortBy = 'maturityDate';
-    if (sort === 'maturity_later') sortBy = '-maturityDate';
+    // Sort options
+    const sortOptions = {};
+    const validSortFields = ['yield', 'coupon', 'maturity', 'bondId', 'rating', 'createdAt'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'yield';
+    sortOptions[sortField] = sortOrder === 'asc' ? 1 : -1;
 
     // Pagination
-    const skip = (page - 1) * limit;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const bonds = await Bond.find(query)
-      .sort(sortBy)
-      .limit(limit * 1)
-      .skip(skip);
+    // Execute query
+    const bonds = await Bond.find(filter)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
 
-    const count = await Bond.countDocuments(query);
+    // Get total count for pagination
+    const total = await Bond.countDocuments(filter);
 
     res.status(200).json({
       success: true,
-      count: bonds.length,
-      total: count,
-      pages: Math.ceil(count / limit),
-      currentPage: parseInt(page),
       data: bonds,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get featured bonds
-// @route   GET /api/bonds/featured
-// @access  Public
-exports.getFeaturedBonds = async (req, res, next) => {
-  try {
-    const bonds = await Bond.find({ isFeatured: true, status: 'active' })
-      .sort('-createdAt')
-      .limit(6);
-
-    res.status(200).json({
-      success: true,
-      count: bonds.length,
-      data: bonds,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get single bond by ID or slug
-// @route   GET /api/bonds/:id
-// @access  Public
-exports.getBond = async (req, res, next) => {
-  try {
-    let bond;
-
-    // Check if it's an ObjectId or slug
-    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-      bond = await Bond.findById(req.params.id);
-    } else {
-      bond = await Bond.findOne({ slug: req.params.id });
-    }
-
-    if (!bond) {
-      return res.status(404).json({
-        success: false,
-        message: 'Bond not found',
-      });
-    }
-
-    // Increment view count
-    bond.views += 1;
-    await bond.save();
-
-    res.status(200).json({
-      success: true,
-      data: bond,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Create new bond
-// @route   POST /api/bonds
-// @access  Private/Admin
-exports.createBond = async (req, res, next) => {
-  try {
-    const bond = await Bond.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: 'Bond created successfully',
-      data: bond,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Update bond
-// @route   PUT /api/bonds/:id
-// @access  Private/Admin
-exports.updateBond = async (req, res, next) => {
-  try {
-    const bond = await Bond.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!bond) {
-      return res.status(404).json({
-        success: false,
-        message: 'Bond not found',
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Bond updated successfully',
-      data: bond,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete bond
-// @route   DELETE /api/bonds/:id
-// @access  Private/Admin
-exports.deleteBond = async (req, res, next) => {
-  try {
-    const bond = await Bond.findByIdAndDelete(req.params.id);
-
-    if (!bond) {
-      return res.status(404).json({
-        success: false,
-        message: 'Bond not found',
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Bond deleted successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get bond statistics
-// @route   GET /api/bonds/stats/summary
-// @access  Public
-exports.getBondStats = async (req, res, next) => {
-  try {
-    const totalBonds = await Bond.countDocuments({ status: 'active' });
-    const avgCoupon = await Bond.aggregate([
-      { $match: { status: 'active' } },
-      { $group: { _id: null, avgCoupon: { $avg: '$coupon' } } },
-    ]);
-    
-    const ratingDistribution = await Bond.aggregate([
-      { $match: { status: 'active' } },
-      { $group: { _id: '$rating', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]);
-
-    res.status(200).json({
-      success: true,
-      data: {
-        totalBonds,
-        avgCoupon: avgCoupon[0]?.avgCoupon.toFixed(2) || 0,
-        ratingDistribution,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
       },
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bonds',
+      error: error.message,
+    });
   }
 };
 
+// Get bond by ID
+exports.getBondById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bond ID is required',
+      });
+    }
+
+    // Build query - try numeric bondId first, then MongoDB _id
+    const numericId = parseInt(id);
+    let query;
+    
+    if (!isNaN(numericId) && numericId.toString() === id) {
+      // ID is a pure number, search by bondId first
+      query = { bondId: numericId };
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
+      // ID is a valid MongoDB ObjectId
+      query = {
+        $or: [
+          { bondId: numericId },
+          { _id: new mongoose.Types.ObjectId(id) }
+        ]
+      };
+    } else {
+      // Try both formats
+      query = {
+        $or: [
+          { bondId: numericId },
+          { _id: id }
+        ]
+      };
+    }
+
+    const bond = await Bond.findOne(query).lean();
+
+    if (!bond) {
+      return res.status(404).json({
+        success: false,
+        message: 'Bond not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: bond,
+    });
+  } catch (error) {
+    console.error('Error fetching bond by ID:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bond',
+      error: error.message,
+    });
+  }
+};
+
+// Get bonds by type
+exports.getBondsByType = async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const bonds = await Bond.find({ type, isActive: true })
+      .sort({ yield: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await Bond.countDocuments({ type, isActive: true });
+
+    res.status(200).json({
+      success: true,
+      data: bonds,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bonds by type',
+      error: error.message,
+    });
+  }
+};
+
+// Get bonds by rating
+exports.getBondsByRating = async (req, res) => {
+  try {
+    const { rating } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const bonds = await Bond.find({ rating, isActive: true })
+      .sort({ yield: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await Bond.countDocuments({ rating, isActive: true });
+
+    res.status(200).json({
+      success: true,
+      data: bonds,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bonds by rating',
+      error: error.message,
+    });
+  }
+};

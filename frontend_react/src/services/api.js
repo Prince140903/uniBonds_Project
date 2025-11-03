@@ -67,6 +67,22 @@ class ApiService {
       body: JSON.stringify({ currentPassword, newPassword }),
     })
   }
+
+  // Bonds endpoints
+  async getBonds(filters = {}) {
+    const queryParams = new URLSearchParams()
+    Object.keys(filters).forEach(key => {
+      if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+        queryParams.append(key, filters[key])
+      }
+    })
+    const queryString = queryParams.toString()
+    return this.request(`/bonds${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getBondById(id) {
+    return this.request(`/bonds/${id}`)
+  }
 }
 
 export default new ApiService()

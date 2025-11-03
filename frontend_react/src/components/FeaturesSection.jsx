@@ -1,41 +1,163 @@
+import { useState, useEffect, useRef } from "react";
+
+const CountUpNumber = ({
+  end,
+  duration = 2000,
+  suffix = "",
+  className = "",
+}) => {
+  const [count, setCount] = useState(0);
+  const elementRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const hasAnimatedRef = useRef(false);
+
+  useEffect(() => {
+    // Reset on component mount
+    setCount(0);
+    hasAnimatedRef.current = false;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAnimatedRef.current) {
+            hasAnimatedRef.current = true;
+
+            const startTime = performance.now();
+
+            const animate = (currentTime) => {
+              const elapsed = currentTime - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+
+              // Easing function for smooth animation
+              const easeOutQuad = progress * (2 - progress);
+              const currentValue = Math.floor(end * easeOutQuad);
+
+              setCount(currentValue);
+
+              if (progress < 1) {
+                animationFrameRef.current = requestAnimationFrame(animate);
+              } else {
+                setCount(end);
+              }
+            };
+
+            animationFrameRef.current = requestAnimationFrame(animate);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    const currentElement = elementRef.current;
+    if (currentElement) {
+      observer.observe(currentElement);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (currentElement) {
+        observer.unobserve(currentElement);
+      }
+    };
+  }, [end, duration, suffix]);
+
+  const displayValue = () => {
+    if (suffix.includes("/")) {
+      return `${count}/7`;
+    }
+    if (suffix === "+") {
+      return `${count}+`;
+    }
+    return count;
+  };
+
+  return (
+    <span ref={elementRef} className={className}>
+      {displayValue()}
+    </span>
+  );
+};
+
 const FeaturesSection = () => {
   const features = [
     {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-target w-10 h-10 text-blue-600">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="lucide lucide-target w-10 h-10 text-blue-600"
+        >
           <circle cx="12" cy="12" r="10"></circle>
           <circle cx="12" cy="12" r="6"></circle>
           <circle cx="12" cy="12" r="2"></circle>
         </svg>
       ),
-      title: 'Curated Bonds',
-      description: 'Bonds tailored to your risk appetite and investment goals',
-      bgColor: 'bg-blue-50',
+      title: "Curated Bonds",
+      description: "Bonds tailored to your risk appetite and investment goals",
+      bgColor: "bg-blue-50",
+      number: 100,
+      suffix: "",
     },
     {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-layout-grid w-10 h-10 text-green-600">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="lucide lucide-layout-grid w-10 h-10 text-green-600"
+        >
           <rect width="7" height="7" x="3" y="3" rx="1"></rect>
           <rect width="7" height="7" x="14" y="3" rx="1"></rect>
           <rect width="7" height="7" x="14" y="14" rx="1"></rect>
           <rect width="7" height="7" x="3" y="14" rx="1"></rect>
         </svg>
       ),
-      title: 'All-in-One Platform',
-      description: 'Products including bonds, NPS, insurance and more',
-      bgColor: 'bg-green-50',
+      title: "All-in-One Platform",
+      description: "Products including bonds, NPS, insurance and more",
+      bgColor: "bg-green-50",
+      number: 6,
+      suffix: "+",
     },
     {
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-headphones w-10 h-10 text-purple-600">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="lucide lucide-headphones w-10 h-10 text-purple-600"
+        >
           <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"></path>
         </svg>
       ),
-      title: 'Personalized Support',
-      description: 'Dedicated client assistance for all your investment needs',
-      bgColor: 'bg-purple-50',
+      title: "Personalized Support",
+      description: "Dedicated client assistance for all your investment needs",
+      bgColor: "bg-purple-50",
+      number: 24,
+      suffix: "/7",
     },
-  ]
+  ];
 
   return (
     <section className="py-8 sm:py-12 lg:py-14 px-4 bg-gradient-to-b from-gray-50 to-white">
@@ -45,7 +167,8 @@ const FeaturesSection = () => {
             What Sets Us <span className="text-unibonds-orange">Apart</span>
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Experience the Unibonds advantage with our comprehensive investment solutions
+            Experience the Unibonds advantage with our comprehensive investment
+            solutions
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8">
@@ -55,8 +178,18 @@ const FeaturesSection = () => {
               className="rounded-lg border bg-card text-card-foreground shadow-sm p-8 hover:shadow-2xl transition-all duration-300 hover:scale-105 text-center group"
               style={{ animationDelay: `${index * 0.2}s` }}
             >
-              <div className={`w-20 h-20 ${feature.bgColor} rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}>
+              <div
+                className={`w-20 h-20 ${feature.bgColor} rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}
+              >
                 {feature.icon}
+              </div>
+              <div className="mb-4">
+                <CountUpNumber
+                  end={feature.number}
+                  duration={2000}
+                  suffix={feature.suffix}
+                  className="text-4xl md:text-5xl font-bold text-unibonds-orange"
+                />
               </div>
               <h3 className="font-poppins font-semibold text-xl text-unibonds-navy mb-3 group-hover:text-unibonds-orange transition-colors">
                 {feature.title}
@@ -67,8 +200,7 @@ const FeaturesSection = () => {
         </div>
       </div>
     </section>
-  )
-}
+  );
+};
 
-export default FeaturesSection
-
+export default FeaturesSection;

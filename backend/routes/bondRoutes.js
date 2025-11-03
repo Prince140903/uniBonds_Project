@@ -1,27 +1,17 @@
 const express = require('express');
-const {
-  getBonds,
-  getFeaturedBonds,
-  getBond,
-  createBond,
-  updateBond,
-  deleteBond,
-  getBondStats,
-} = require('../controllers/bondController');
-const { protect, authorize } = require('../middleware/auth');
-
 const router = express.Router();
+const bondController = require('../controllers/bondController');
 
-// Public routes
-router.get('/', getBonds);
-router.get('/featured', getFeaturedBonds);
-router.get('/stats/summary', getBondStats);
-router.get('/:id', getBond);
+// Get all bonds with optional filters
+router.get('/', bondController.getAllBonds);
 
-// Admin routes
-router.post('/', protect, authorize('admin'), createBond);
-router.put('/:id', protect, authorize('admin'), updateBond);
-router.delete('/:id', protect, authorize('admin'), deleteBond);
+// Get bond by ID
+router.get('/:id', bondController.getBondById);
+
+// Get bonds by type
+router.get('/type/:type', bondController.getBondsByType);
+
+// Get bonds by rating
+router.get('/rating/:rating', bondController.getBondsByRating);
 
 module.exports = router;
-
