@@ -1,3 +1,7 @@
+import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+
 const OtherProductsSection = () => {
   const products = [
     { name: 'Structured Products', href: '/other-products/structured-products', icon: 'trending-up', bgColor: 'bg-blue-50', iconColor: 'text-blue-600' },
@@ -7,6 +11,8 @@ const OtherProductsSection = () => {
     { name: 'NPS', href: '/nps', icon: 'file-text', bgColor: 'bg-indigo-50', iconColor: 'text-indigo-600' },
     { name: 'Mutual Funds', href: '/other-products', icon: 'building2', bgColor: 'bg-rose-50', iconColor: 'text-rose-600' },
   ]
+
+  const [hoveredIndex, setHoveredIndex] = useState(null);
 
   const getIconSvg = (iconName) => {
     const icons = {
@@ -71,9 +77,35 @@ const OtherProductsSection = () => {
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          {products.map((product) => (
-            <a key={product.name} href={product.href}>
-              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group h-full flex flex-col items-center text-center">
+          {products.map((product, idx) => (
+            <a
+              key={product.name}
+              href={product.href}
+              className="relative group block p-2 h-full w-full"
+              onMouseEnter={() => setHoveredIndex(idx)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              <AnimatePresence>
+                {hoveredIndex === idx && (
+                  <motion.span
+                    className="absolute inset-0 h-full w-full bg-neutral-200 dark:bg-slate-300/[0.6] block rounded-3xl"
+                    layoutId="hoverBackground"
+                    initial={{ opacity: 0 }}
+                    animate={{
+                      opacity: 1,
+                      transition: { duration: 0.15 },
+                    }}
+                    exit={{
+                      opacity: 0,
+                      transition: { duration: 0.15, delay: 0.2 },
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+              <div className={cn(
+                "rounded-lg border bg-white text-card-foreground shadow-sm p-6 hover:shadow-xl transition-all duration-300 cursor-pointer h-full flex flex-col items-center text-center relative z-20",
+                "group-hover:border-unibonds-orange/50"
+              )}>
                 <div className={`w-16 h-16 ${product.bgColor} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${product.iconColor}`}>
                   {getIconSvg(product.icon)}
                 </div>
