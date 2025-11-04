@@ -101,12 +101,12 @@ const HeroSection = () => {
                 <div className="font-poppins font-bold text-2xl sm:text-3xl text-unibonds-navy">
                   <CountUp
                     from={0}
-                    to={8.5}
+                    to={8}
                     separator=""
                     direction="up"
                     duration={1}
-                    decimals={1}
-                    suffix="%+"
+                    decimals={0}
+                    suffix=".5%+"
                     className="count-up-text"
                   />
                 </div>

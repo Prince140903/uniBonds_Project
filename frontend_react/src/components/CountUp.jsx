@@ -22,70 +22,86 @@ const CountUp = ({
   useEffect(() => {
     if (!elementRef.current || hasAnimatedRef.current) return;
 
+    const startAnimation = () => {
+      if (hasAnimatedRef.current) return;
+      hasAnimatedRef.current = true;
+
+      // Wait for delay
+      const timeout = setTimeout(() => {
+        const startValue = from;
+        const endValue = to;
+
+        const obj = { value: startValue };
+        animationRef.current = gsap.to(obj, {
+          value: endValue,
+          duration: duration,
+          ease: 'power2.out',
+          onUpdate: function () {
+            const currentValue = direction === 'up' 
+              ? obj.value 
+              : endValue - (obj.value - startValue);
+            
+            let formattedValue;
+            
+            if (decimals > 0) {
+              formattedValue = currentValue.toFixed(decimals);
+            } else {
+              formattedValue = Math.floor(currentValue).toString();
+            }
+
+            // Add separator if provided (only for integers)
+            if (separator && decimals === 0) {
+              formattedValue = formattedValue.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+            }
+
+            setCount(formattedValue);
+          },
+          onComplete: () => {
+            // Ensure final value is set
+            let finalValue;
+            if (decimals > 0) {
+              finalValue = to.toFixed(decimals);
+            } else {
+              finalValue = Math.floor(to).toString();
+              // Add separator if provided (only for integers)
+              if (separator) {
+                finalValue = finalValue.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+              }
+            }
+            
+            setCount(finalValue);
+          },
+        });
+      }, delay);
+
+      return timeout;
+    };
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting && !hasAnimatedRef.current) {
-            hasAnimatedRef.current = true;
-
-            // Wait for delay
-            const timeout = setTimeout(() => {
-              const startValue = from;
-              const endValue = to;
-
-              const obj = { value: startValue };
-              animationRef.current = gsap.to(obj, {
-                value: endValue,
-                duration: duration,
-                ease: 'power2.out',
-                onUpdate: function () {
-                  const currentValue = direction === 'up' 
-                    ? obj.value 
-                    : endValue - (obj.value - startValue);
-                  
-                  let formattedValue;
-                  
-                  if (decimals > 0) {
-                    formattedValue = currentValue.toFixed(decimals);
-                  } else {
-                    formattedValue = Math.floor(currentValue).toString();
-                  }
-
-                  // Add separator if provided (only for integers)
-                  if (separator && decimals === 0) {
-                    formattedValue = formattedValue.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
-                  }
-
-                  setCount(formattedValue);
-                },
-                onComplete: () => {
-                  // Ensure final value is set
-                  let finalValue;
-                  if (decimals > 0) {
-                    finalValue = to.toFixed(decimals);
-                  } else {
-                    finalValue = Math.floor(to).toString();
-                    // Add separator if provided (only for integers)
-                    if (separator) {
-                      finalValue = finalValue.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
-                    }
-                  }
-                  
-                  setCount(finalValue);
-                },
-              });
-            }, delay);
-
-            return () => clearTimeout(timeout);
+            startAnimation();
           }
         });
       },
-      { threshold: 0.1, rootMargin: '-100px' }
+      { threshold: 0.1, rootMargin: '0px' }
     );
 
     const currentElement = elementRef.current;
+    
+    // Check if element is already visible (for hero section)
     if (currentElement) {
-      observer.observe(currentElement);
+      const rect = currentElement.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+      
+      if (isVisible) {
+        // Element is already visible, start animation immediately
+        startAnimation();
+      } else {
+        // Element not visible yet, use observer
+        observer.observe(currentElement);
+      }
     }
 
     return () => {
